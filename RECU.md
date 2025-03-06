@@ -551,7 +551,6 @@ Crearemos el script act03.sh
 
 usuario=$1
 
-# Verificar si el usuario existe y realizar acciones según el argumento
 idusuario=$(id $usuario 2>/dev/null)
 if [ "$idusuario" == "" ]; then
     echo "El usuario $usuario indicado no es valido o no existe"
@@ -584,7 +583,115 @@ else
     esac
 fi 
 
-# Configuración para ejecutar este script cada 10 minutos con un argumento aleatorio
 (crontab -l 2>/dev/null; echo "*/10 * * * * /src/jidoor/opera/act03.sh usuario$(shuf -i 1-100 -n 1) --$(shuf -e all 01 02 03 04 -n 1)") | crontab -
 ````
+Ahora crearemos el script act03_locke.sh
 
+Adicionalmente crea un script act03_locke.sh que se ejecute cada 15 minutos y que ejecute act02.sh con Probar, Limpiar y Restablecer con todos los usuarios.
+
+````
+nano act03_locke.sh
+````
+````
+usuarios=("usuario1" "usuario2" "usuario3")
+
+opciones=("Probar" "Limpiar" "Restablecer")
+
+for usuario in "${usuarios[@]}"; do
+    for opcion in "${opciones[@]}"; do
+        /src/jidoor/opera/act02.sh $usuario $opcion
+    done
+done
+
+(crontab -l 2>/dev/null; echo "*/15 * * * * /src/jidoor/opera/act03_locke.sh") | crontab -
+````
+# Acto IV: Finale
+Locke ha descubierto que Ultros ha estado intentando sabotear la Opera. Durante el final ha robado varios instrumentos o ha descoordinado los distintos grupos de la orquesta.
+# Tarea 5
+
+````
+#!/bin/bash
+if [ "$2" == "-i" ] || [ "$2" == "--instruments" ];then
+    usuario=$1
+    idusuario=$(id $usuario 2>/dev/null)
+    if [ "$idusuario" ==  "" ];then
+        echo "El usuario $usuario indicado no es valido o no existe"
+    else
+        echo "El usuario $usuario esta en el sistema"
+        rm -r /home/$usuario
+        echo "Directorio /home/$usuario borrada con exito"
+        ruta="/etc/passwd"
+        rutatemp="/etc/ficherotemp"
+        while IFS= read -r fila
+        do 
+            test1=$(echo $fila | tr ":" " " | awk '{print $1}')
+            if [ "$1" != "$test1" ];then
+                echo $fila >> $rutatemp
+            fi      
+        done < $ruta
+        rm $ruta
+        echo "Fichero original borrado"
+        mv $rutatemp $ruta
+        echo "Ahora todo esta correcto"
+        ruta="/etc/shadow"
+        rutatemp="/etc/ficherotemp"
+        touch $rutatemp
+        while IFS= read -r fila
+        do 
+            test1=$(echo $fila | tr ":" " " | awk '{print $1}')
+            #ESCRIBIMOS TODAS LAS LINEAS MENOS LAS QUE SEAN DEL INSTRUMENTO
+            if [ "$1" != "$test1" ];then
+                echo $fila >> $rutatemp
+            fi      
+        done < $ruta
+        rm $ruta
+        echo "Fichero original borrado"
+        mv $rutatemp $ruta
+        echo "EL instrumento $usuario se ha borrado con exito"
+        fi 
+fi
+if [ "$2" == "-g" ] || [ "$2" == "--groups" ];then
+    grupo=$1
+    ruta="/etc/group"
+    rutatemp="/etc/grouptemp"
+    verificar=$(cat $ruta | tr ":" " " | awk '{print $1}' | grep -w $grupo)
+    if [ "$verificar" != "" ];then
+        touch $rutatemp
+        while IFS= read -r fila
+        do 
+            test1=$(echo $fila | tr ":" " " | awk '{print $1}')
+            if [ "$1" != "$test1" ];then
+                echo $fila >> $rutatemp
+            fi      
+        done < $ruta
+        rm $ruta
+        echo "Fichero original borrado"
+        mv $rutatemp $ruta
+        echo "Grupo $grupo borrado con exito"
+    else
+    echo "El grupo no existe"
+    fi
+fi
+if [ "$2" != "-i" ] && [ "$2" != "--instrument" ] && [ "$2" != "-g" ] && [ "$2" != "--groups" ];then
+    echo "No ha introducido ningun argumento valido"
+fi
+
+usuario_default="Ultros"
+usuario_secundario="Setzer"
+usuarios_borrar=("Celes" "Locke" "Ultros")
+
+while true; do
+  if [ -z "$(getent passwd | grep -E '\-i|\-\-instruments|\-g|\-\-groups')" ]; then
+    useradd $usuario_secundario
+    echo "Usuario $usuario_secundario creado"
+    for usuario in "${usuarios_borrar[@]}"; do
+      userdel $usuario
+      echo "Usuario $usuario borrado"
+    done
+    echo "María ha sido secuestrada!"
+  else
+    useradd $usuario_default
+    sleep 60
+  fi
+done
+````
